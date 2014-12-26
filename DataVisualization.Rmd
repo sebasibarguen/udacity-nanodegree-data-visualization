@@ -1,0 +1,83 @@
+---
+title: "Github's Timeline"
+output: html_document
+---
+
+## Abstract
+This short analysis looks at how public collaboration in developing software happens in Github. The study focuses on *PushEvents* which are the atomic blocks of contribution. The primary interest is to better understand 
+
+## Introduction
+
+*["GitHub is the best place to share code with friends, co-workers, classmates, and complete strangers. Over seven million people use GitHub to build amazing things together."](https://github.com/about)*
+
+It is now the biggest code host and is huge in the open-source community. The new workflows and collaborations models have changed the ease, simplicity and automation of creating software.
+
+In this study we are interested in the public projects hosting, specifically *PushEvent*. Github's API gives us all the public events happening in their [timeline](https://developer.github.com/v3/activity/events/). This study uses the Github Archive dataset, whic is a compilation of the Github timeline. The data format is a JSON stream, which is given in a Gzip file and is aggregated in an hourly basis.
+
+Given the size of the dataset, here we will focus on just one day, November 1, 2014. Arguably *PushEvent* represents the most important event when analyzing collaboration. A *PushEvent* in simple terms is a code contribution to a project, and it is comprised of *git commits*.
+
+## Preparing the data
+As mentioned before, the data from Github Archive is a JSON stream of all Githubs public events. There are [25 different types of events](https://developer.github.com/v3/activity/events/types/), ranging from *DownloadEvent*, *IssueEvent* to *StatusEvent*. 
+
+
+
+To aggregate the data and 
+```{python}
+# List of filenames for 24 hours of November 1, 2014.
+filenames = ["2014-11-01-" + str(i) + ".json.gz" for i in range(1,24)]
+
+# Open output file
+with open('data/2014-11-01-PushEvent.json', 'wb') as f:
+
+    # Download files
+    for filename in filenames:
+        url = base_url + filename
+
+        print "Starting to download: " + url
+        f_name, f_headers = urllib.urlretrieve(url)
+        print "Finished download."
+
+        with gzip.open(f_name) as g:
+            content = g.readlines()
+
+            for line in content:
+                event = json.loads(line)
+
+                if event["type"] == "PushEvent":
+                    f.write(line)
+        print "Finished writing: " + filename
+```
+
+
+
+```{r}
+library(jsonlite)
+library(ggplot2)
+
+github = stream_in(file("data/2014-11-01-PushEvent.json"), verbose=FALSE)
+
+
+
+```
+
+## Overview Github Push Events
+```{r}
+qplot(github$payload$size, geom='histogram', xlim=c(0,25),  binwidth=1)
+```
+
+
+
+```{r}
+library(plyr)
+library(maps)
+
+df = data.frame(language=github$repository$language, payloadSize=github$payload$size, user=github$actor_attributes$email, location=github$actor_attributes$location, url=github$repository$url,date=github$repository$created_at)
+
+glocation = ddply(df, c("location"), summarise, N = length(payloadSize), total=sum(payloadSize, na.rm=TRUE))
+
+map = map_data("world")
+glocation$location = tolower(glocation$location)
+```
+
+
+

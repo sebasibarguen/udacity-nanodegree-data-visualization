@@ -9,9 +9,16 @@ file_directory = "data/2014-11-01-0.json.gz"
 
 filenames = ["2014-11-01-" + str(i) + ".json.gz" for i in range(1,24)]
 
+accepted_event_types = ["PushEvent"]
+
+def validate_input(day_of_year, event):
+    pass
+
+def get_github_files(day_of_year, event):
+    pass
 
 # Write to file
-with open('data2/2014-11-01-PushEvent.json', 'wb') as f:
+with open('data/2014-11-01-PushEvent.json', 'wb') as f:
 
     # Download files
     for filename in filenames:
