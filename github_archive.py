@@ -45,16 +45,21 @@ with open('data/2014-11-01-PushEvent.json', 'wb') as f:
                             print "user has location: " + place
 
                             try:
-                                unlock_response = places.nameAndFeatureSearch( place, 'Countries', 'json' )
+                                # unlock_response = places.nameAndFeatureSearch( place, 'Countries', 'json' )
+                                unlock_response = places.nameSearch( place, 'json' )
                                 unlock_json = json.loads(unlock_response)
 
                                 features = unlock_json['features']
                                 properties = features[0]['properties']
                                 centroid = properties['centroid']
+
+                                country = properties['country']
                                 # print "got unlock lat-long: " + centroid
 
                                 event['actor_attributes']['lat'] = float(centroid.split(", ")[0])
                                 event['actor_attributes']['lon'] = float(centroid.split(", ")[-1])
+
+                                event['actor_attributes']['country'] = country
                             except:
                                 pass
                                 # print "problems with converting lat-long."

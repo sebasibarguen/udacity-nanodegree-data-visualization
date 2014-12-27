@@ -60,7 +60,9 @@ library(ggplot2)
 
 github = stream_in(file("data/2014-11-01-PushEvent.json"), verbose=FALSE)
 
+df = data.frame(language=github$repository$language, payloadSize=github$payload$size, user=github$actor_attributes$email, location=github$actor_attributes$location, url=github$repository$url,date=github$repository$created_at, pushDate = github$created_at, forked = github$repository$forked, forks = github$repository$forks, lat=github$actor_attributes$lat, lon=github$actor_attributes$lon, country=df$actor_attributes$country)
 
+rm(github)
 
 ```
 
@@ -88,8 +90,6 @@ df$hourOfDay = lapply(df$hourOfDay, strftime, format="%H")
 ```{r}
 library(plyr)
 library(maps)
-
-df = data.frame(language=github$repository$language, payloadSize=github$payload$size, user=github$actor_attributes$email, location=github$actor_attributes$location, url=github$repository$url,date=github$repository$created_at)
 
 glocation = ddply(df, c("location"), summarise, N = length(payloadSize), total=sum(payloadSize, na.rm=TRUE))
 
