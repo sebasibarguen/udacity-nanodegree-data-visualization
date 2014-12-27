@@ -20,9 +20,13 @@ Given the size of the dataset, here we will focus on just one day, November 1, 2
 As mentioned before, the data from Github Archive is a JSON stream of all Githubs public events. There are [25 different types of events](https://developer.github.com/v3/activity/events/types/), ranging from *DownloadEvent*, *IssueEvent* to *StatusEvent*. 
 
 
+After having problems preparing the data inside R, I decided to implement a small python script to do the job instead. The scripts purpose is to download the 24 files for November 1, look only for the *PushEvent* and write that to a new file. The output file is 735MB, 
 
-To aggregate the data and 
 ```{python}
+import gzip
+import urllib
+import json
+
 # List of filenames for 24 hours of November 1, 2014.
 filenames = ["2014-11-01-" + str(i) + ".json.gz" for i in range(1,24)]
 
@@ -65,7 +69,21 @@ github = stream_in(file("data/2014-11-01-PushEvent.json"), verbose=FALSE)
 qplot(github$payload$size, geom='histogram', xlim=c(0,25),  binwidth=1)
 ```
 
+### Hour of day
+```{r}
+df$hourOfDay = lapply(df$pushDate, strptime, format="%Y-%m-%dT%H:%M:%S")
+df$hourOfDay = lapply(df$hourOfDay, strftime, format="%H")
+```
 
+### Push contributions date vs repository date
+
+### Programming languages
+
+## Mapping contributions
+
+1. What countries are most active?
+2. How much cross-country contribution occurs?
+3. 
 
 ```{r}
 library(plyr)
