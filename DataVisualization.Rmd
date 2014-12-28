@@ -52,11 +52,10 @@ with open('data/2014-11-01-PushEvent.json', 'wb') as f:
         print "Finished writing: " + filename
 ```
 
-
+Read the data and pass it to a dataframe.
 
 ```{r}
 library(jsonlite)
-library(ggplot2)
 
 github = stream_in(file("data/2014-11-01-PushEvent.json"), verbose=FALSE)
 
@@ -68,6 +67,8 @@ rm(github)
 
 ## Overview Github Push Events
 ```{r}
+library(ggplot2)
+
 qplot(github$payload$size, geom='histogram', xlim=c(0,25),  binwidth=1)
 ```
 
@@ -75,6 +76,11 @@ qplot(github$payload$size, geom='histogram', xlim=c(0,25),  binwidth=1)
 ```{r}
 df$hourOfDay = lapply(df$pushDate, strptime, format="%Y-%m-%dT%H:%M:%S")
 df$hourOfDay = lapply(df$hourOfDay, strftime, format="%H")
+
+
+df$pushHour = sapply(df$hourOfDay, function(x) { return( x[[1]] ) })
+
+qplot(df$pushHour, geom='histogram', binwidth=1)
 ```
 
 ### Push contributions date vs repository date
