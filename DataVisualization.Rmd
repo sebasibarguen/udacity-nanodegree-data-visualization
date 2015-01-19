@@ -4,7 +4,7 @@ output: html_document
 ---
 
 ## Abstract
-This short analysis looks at how public collaboration in developing software happens in Github. The study focuses on *PushEvents* which are the atomic blocks of contribution. The primary interest is to better understand 
+This short analysis looks at how public collaboration happens in Github. The study focuses on *PushEvents* which are the atomic blocks of contribution. The primary interest is to better understand the relationhip's between open issues, push events and forks.
 
 ## Introduction
 
@@ -14,13 +14,14 @@ It is now the biggest code host and is huge in the open-source community. The ne
 
 In this study we are interested in the public projects hosting, specifically *PushEvent*. Github's API gives us all the public events happening in their [timeline](https://developer.github.com/v3/activity/events/). This study uses the Github Archive dataset, whic is a compilation of the Github timeline. The data format is a JSON stream, which is given in a Gzip file and is aggregated in an hourly basis.
 
-Given the size of the dataset, here we will focus on just one day, November 1, 2014. Arguably *PushEvent* represents the most important event when analyzing collaboration. A *PushEvent* in simple terms is a code contribution to a project, and it is comprised of *git commits*.
+Given the size of the dataset, I took just one day, November 1, 2014. (In the [extra section](## extra section) I explored using BigQUery to analyze years of data which would of been imposible to do it locally because of the size of the dataset). Arguably *PushEvent* represents the most important event when analyzing collaboration. A *PushEvent* in simple terms is a (small) code contribution to a project, and it is comprised of *git commits*.
 
 ## Preparing the data
-As mentioned before, the data from Github Archive is a JSON stream of all Githubs public events. There are [25 different types of events](https://developer.github.com/v3/activity/events/types/), ranging from *DownloadEvent*, *IssueEvent* to *StatusEvent*. 
+As mentioned before, the data from Github Archive is a JSON stream of all Githubs public events. There are [25 different types of events](https://developer.github.com/v3/activity/events/types/), ranging from *DownloadEvent*, *IssueEvent* to *StatusEvent*.
 
+After having problems preparing the data inside R, I decided to implement a small python script to do the job instead. The scripts purpose is to download the 24 files for November 1, look only for the *PushEvent* and write that to a new file. An interesting data point that is included in each github event is the user attributes like location. So to do interesting geographic analysis, I used unlock api to get country location out of specified user location. 
 
-After having problems preparing the data inside R, I decided to implement a small python script to do the job instead. The scripts purpose is to download the 24 files for November 1, look only for the *PushEvent* and write that to a new file. The output file is 735MB, 
+The output file is 735MB,
 
 ```{python}
 import gzip
@@ -52,24 +53,67 @@ with open('data/2014-11-01-PushEvent.json', 'wb') as f:
         print "Finished writing: " + filename
 ```
 
-Read the data and pass it to a dataframe.
+After running the python script, the data file is still a json stream, but the big difference is that it's of the same type of event and therefore json scheme. In R we then read the data and pass it to a dataframe. The newly created dataframe is still in a weird format because it has dataframes inside of dataframes, in a way copying what the initial json scheme. To better clean the data, a new dataframe is created with the variables of interest and in the same level. We then delete the old dataframe to free up memory. 
 
 ```{r}
 library(jsonlite)
 
-github = stream_in(file("data/2014-11-01-PushEvent.json"), verbose=FALSE)
+github = stream_in(file("data/2014-11-01-PushEvent-2.json"), verbose=FALSE)
 
-df = data.frame(language=github$repository$language, payloadSize=github$payload$size, user=github$actor_attributes$email, location=github$actor_attributes$location, url=github$repository$url,date=github$repository$created_at, pushDate = github$created_at, forked = github$repository$forked, forks = github$repository$forks, lat=github$actor_attributes$lat, lon=github$actor_attributes$lon, country=df$actor_attributes$country)
+df = data.frame(language=github$repository$language, 
+                payloadSize=github$payload$size, 
+                user=github$actor_attributes$email, 
+                location=github$actor_attributes$location, 
+                url=github$repository$url,
+                date=github$repository$created_at, 
+                pushDate = github$created_at, 
+                fork = github$repository$fork, 
+                size = github$repository$size,
+                forks_count = github$repository$forks_count, 
+                open_issues = github$repository$open_issues_count, 
+                watchers_count = github$repository$watchers_count, 
+                stargazers_count = github$repository$stargazers_count, 
+                lat=github$actor_attributes$lat, 
+                lon=github$actor_attributes$lon, 
+                country=df$actor_attributes$country)
 
 rm(github)
 
 ```
 
-## Overview Github Push Events
+With the data ready, we can start doing the cool stuff =)
+
+## Exploring the data
+
+To start of, we look at all the variables histograms to get an idea of their distribution. Below we can see the size of the repositories in KB. The size of a repository inderectly measures the complexity of a project. The reasoning goes as follows: bigger size means more bytes which translates into more lines of code and more files which consequently increases the amount of information needed to process and undesrtand the project, therefore it increases its complexity. 
 ```{r}
 library(ggplot2)
 
 qplot(github$payload$size, geom='histogram', xlim=c(0,25),  binwidth=1)
+```
+
+
+### Open Issues Histogram
+```{r}
+ggplot(df, aes(open_issues)) + geom_histogram() + scale_x_log10()
+
+```
+
+
+### Forks count Histogram
+```{r}
+ggplot(df, aes(forks_count)) + geom_histogram() + scale_x_log10()
+
+```
+
+
+### Size and Fork count
+
+If we take size to measure complexity, we should expect that more complex projects have more collaboration (measured via forks).
+
+```{r}
+
+ggplot(df, aes(forks_count, size)) + geom_point()
 ```
 
 ### Hour of day
@@ -85,23 +129,78 @@ qplot(df$pushHour, geom='histogram', binwidth=1)
 
 ### Push contributions date vs repository date
 
-### Programming languages
-
 ## Mapping contributions
 
 1. What countries are most active?
 2. How much cross-country contribution occurs?
-3. 
+3.
 
 ```{r}
-library(plyr)
+library(dplyr)
 library(maps)
 
-glocation = ddply(df, c("location"), summarise, N = length(payloadSize), total=sum(payloadSize, na.rm=TRUE))
+df.location = group_by(df, location) %>% 
+              summarise(n=n(),
+                        total = sum(payloadSize, na.rm=TRUE)
+                        )
 
 map = map_data("world")
-glocation$location = tolower(glocation$location)
+df.location$location = tolower(glocation$location)
 ```
 
+
+### Programming languages
+
+```{r}
+df.language = group_by(df, language) %>% 
+              summarise(n = n(), 
+                        open_issues = sum(open_issues), 
+                        open_issuesA=mean(open_issues), 
+                        open_issuesSD = sd(open_issues), 
+                        forks = sum(forks_count), 
+                        forksA=mean(forks_count), 
+                        forksSD=sd(forks_count), 
+                        size=sum(as.numeric(size)), 
+                        watchers=sum(watchers_count), 
+                        stars=sum(stargazers_count)
+                )
+
+coef(lm(log10(forks+1) ~ log10(open_issues+1), data = df.language))
+
+ggplot(df.language, aes(forks, open_issues)) + geom_point(aes(size=n,colour=size)) + scale_x_log10() + scale_y_log10() + geom_abline(intercept=0.1375, slope=.918)
+
+```
+#### Top 10 languages
+```{r}
+df.top_languages = df.language[order(-df.language$n),]
+df.top_languages = df.top_languages[-c(4),]
+df.top_languages = df.top_languages[seq(1,10),]s
+
+head(languages)
+```
+
+
+##### Forks of top languages
+```{r}
+ggplot(df.top_languages, aes(language, forks)) + geom_bar(stat="identity")
+```
+
+
+#### Forks vs Open Issues, and the amount of 
+```{r}
+ggplot(df.top_languages, aes(open_issues, forks, size=n, colour=language)) + geom_point() + guides(size=FALSE)
+```
+The color for the smallest dots are hard to see, but
+
+
+## Final Plots and Summary
+
+
+## Reflection
+
+
+
+### Using Google BigQuery to analyze years of data
+[Github timeline and Google BigQuery](http://googledevelopers.blogspot.com/2012/05/using-google-bigquery-to-learn-from.html). 
 
 
