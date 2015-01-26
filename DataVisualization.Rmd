@@ -19,7 +19,7 @@ Given the size of the dataset, I took just one day, November 1, 2014. (In the [e
 ## Preparing the data
 As mentioned before, the data from Github Archive is a JSON stream of all Githubs public events. There are [25 different types of events](https://developer.github.com/v3/activity/events/types/), ranging from *DownloadEvent*, *IssueEvent* to *StatusEvent*.
 
-After having problems preparing the data inside R, I decided to implement a small python script to do the job instead. The scripts purpose is to download the 24 files for November 1, look only for the *PushEvent* and write that to a new file. An interesting data point that is included in each github event is the user attributes like location. So to do interesting geographic analysis, I used unlock api to get country location out of specified user location. 
+After having problems preparing the data inside R, I decided to implement a small python script to do the job instead. The scripts purpose is to download the 24 files for November 1, look only for the *PushEvent* and write that to a new file. An interesting data point that is included in each github event is the user attributes like location. So to do interesting geographic analysis, I used unlock api to get country location out of specified user location.
 
 The output file is 735MB,
 
@@ -53,29 +53,33 @@ with open('data/2014-11-01-PushEvent.json', 'wb') as f:
         print "Finished writing: " + filename
 ```
 
-After running the python script, the data file is still a json stream, but the big difference is that it's of the same type of event and therefore json scheme. In R we then read the data and pass it to a dataframe. The newly created dataframe is still in a weird format because it has dataframes inside of dataframes, in a way copying what the initial json scheme. To better clean the data, a new dataframe is created with the variables of interest and in the same level. We then delete the old dataframe to free up memory. 
+After running the python script, the data file is still a json stream, but the big difference is that it's of the same type of event and therefore json scheme. In R we then read the data and pass it to a dataframe. The newly created dataframe is still in a weird format because it has dataframes inside of dataframes, in a way copying what the initial json scheme. To better clean the data, a new dataframe is created with the variables of interest and in the same level. We then delete the old dataframe to free up memory.
 
 ```{r}
 library(jsonlite)
+library(ggplot2)
+library(dplyr)
+library(maps)
+suppressMessages(library(GGally))
+```
 
+
+```{r}
 github = stream_in(file("data/2014-11-01-PushEvent-2.json"), verbose=FALSE)
 
-df = data.frame(language=github$repository$language, 
-                payloadSize=github$payload$size, 
-                user=github$actor_attributes$email, 
-                location=github$actor_attributes$location, 
+df = data.frame(language=github$repository$language,
+                payloadSize=github$payload$size,
+                user=github$actor_attributes$email,
+                location=github$actor_attributes$location,
                 url=github$repository$url,
-                date=github$repository$created_at, 
-                pushDate = github$created_at, 
-                fork = github$repository$fork, 
+                date=github$repository$created_at,
+                pushDate = github$created_at,
+                fork = github$repository$fork,
                 size = github$repository$size,
-                forks_count = github$repository$forks_count, 
-                open_issues = github$repository$open_issues_count, 
-                watchers_count = github$repository$watchers_count, 
-                stargazers_count = github$repository$stargazers_count, 
-                lat=github$actor_attributes$lat, 
-                lon=github$actor_attributes$lon, 
-                country=df$actor_attributes$country)
+                forks_count = github$repository$forks_count,
+                open_issues = github$repository$open_issues_count,
+                watchers_count = github$repository$watchers_count,
+                stargazers_count = github$repository$stargazers_count)
 
 rm(github)
 
@@ -85,17 +89,20 @@ With the data ready, we can start doing the cool stuff =)
 
 ## Exploring the data
 
-To start of, we look at all the variables histograms to get an idea of their distribution. Below we can see the size of the repositories in KB. The size of a repository inderectly measures the complexity of a project. The reasoning goes as follows: bigger size means more bytes which translates into more lines of code and more files which consequently increases the amount of information needed to process and undesrtand the project, therefore it increases its complexity. 
-```{r}
-library(ggplot2)
+To start of, we look at all the variables histograms to get an idea of their distribution. Below we can see the size of the repositories in KB.
 
-qplot(github$payload$size, geom='histogram', xlim=c(0,25),  binwidth=1)
+### Size Histogram
+```{r}
+ggplot(df, aes(payloadSize)) + geom_histogram() + scale_x_log10() + ggtitle("Histogram of Number of commits per push (log10)") + xlab("Frequency") + ylab("Number of commits per push")
 ```
 
+The size of a repository indirectly measures the complexity of a project. The reasoning goes as follows: bigger size means more bytes which (almost always) translates into more lines of code and/or more files which consequently increases the amount of information needed to process and understand the project, therefore it increases its complexity.
 
 ### Open Issues Histogram
+Next we take a look at open issues for pushed forks.
+
 ```{r}
-ggplot(df, aes(open_issues)) + geom_histogram() + scale_x_log10()
+ggplot(df, aes(open_issues)) + geom_histogram() + scale_x_log10() + ggtitle("Histogram of Open Issues of public Github repositories (log10)") + xlab("Frequency") + ylab("Number of open issues")
 
 ```
 
@@ -112,19 +119,29 @@ ggplot(df, aes(forks_count)) + geom_histogram() + scale_x_log10()
 If we take size to measure complexity, we should expect that more complex projects have more collaboration (measured via forks).
 
 ```{r}
-
 ggplot(df, aes(forks_count, size)) + geom_point()
 ```
 
 ### Hour of day
+Are there certain hours a da
 ```{r}
 df$hourOfDay = lapply(df$pushDate, strptime, format="%Y-%m-%dT%H:%M:%S")
 df$hourOfDay = lapply(df$hourOfDay, strftime, format="%H")
 
-
 df$pushHour = sapply(df$hourOfDay, function(x) { return( x[[1]] ) })
 
-qplot(df$pushHour, geom='histogram', binwidth=1)
+ggplot(df, aes(pushHour)) + geom_histogram(binwidth=1)
+```
+
+```{r}
+df$age = as.Date(df$date) %>% difftime(as.Date("2014-11-01"), units="days") %>% as.numeric
+
+ggplot(df, aes(age)) + geom_histogram(binwidth=7) 
+```
+
+
+```{r}
+ggplot(df, aes(log10(-age + 1))) + geom_histogram() 
 ```
 
 ### Push contributions date vs repository date
@@ -135,72 +152,173 @@ qplot(df$pushHour, geom='histogram', binwidth=1)
 2. How much cross-country contribution occurs?
 3.
 
-```{r}
-library(dplyr)
-library(maps)
-
-df.location = group_by(df, location) %>% 
+To do a good geographic analysis, first I had to get the latitude and longitude of all the locations. For that I used the [Unlock API]() following the suggestion of [](). Given the time that it takes to run on all 6068 locations, I wrote the df.location dataframe with the lat-long values into a csv file so it would take less time to read. 
+```
+df.location = group_by(df, location) %>%
               summarise(n=n(),
                         total = sum(payloadSize, na.rm=TRUE)
                         )
+df.location$location = tolower(df.location$location)
 
-map = map_data("world")
-df.location$location = tolower(glocation$location)
+df.location$centroid = NA
+df.location$country = NA
+
+for(i in 1:length(df.location$location)) {
+  
+  if( nchar(df.location$location[i]) <= 3 ){
+    df.location$centroid[i] = NA
+    next
+  }
+  
+  url = paste("http://unlock.edina.ac.uk/ws/search?format=json&name=", URLencode(df.location$location[i]), sep="")
+  good_url_call = 1
+  tryCatch({ 
+    json = fromJSON(url)
+    }, error = function(e){
+      good_url_call = 0
+    })
+  
+  if (!good_url_call) { next }
+  
+  if ( as.numeric(json$totalResults) > 0 ) {
+
+    df.location$centroid[i] = json$features$properties$centroid[1]
+    df.location$country[i] = json$features$properties$country[1]
+  
+  }
+}
+
+latlon = strsplit(df.location$centroid, ",")
+df.location$lat = sapply(latlon, function(x){ return(as.numeric(x[1])) })
+df.location$lon = sapply(latlon, function(x){ return(as.numeric(x[2])) })
+
+write.csv(df.location, "data/github_location.csv")
 ```
 
 
+```{r}
+df.location = read.csv("data/github_location.csv")
+map = map_data("world")
+```
+
 ### Programming languages
 
+Do coders of certain languages tend to be more collaborative? 
+
+To facilitate the analyses, a new dataframe is created by grouping the previous dataframe by languages. 
 ```{r}
-df.language = group_by(df, language) %>% 
-              summarise(n = n(), 
-                        open_issues = sum(open_issues), 
-                        open_issuesA=mean(open_issues), 
-                        open_issuesSD = sd(open_issues), 
-                        forks = sum(forks_count), 
-                        forksA=mean(forks_count), 
-                        forksSD=sd(forks_count), 
-                        size=sum(as.numeric(size)), 
-                        watchers=sum(watchers_count), 
+df.language = group_by(df, language) %>%
+              summarise(n = n(),
+                        open_issues = sum(open_issues),
+                        open_issuesA=mean(open_issues),
+                        open_issuesSD = sd(open_issues),
+                        forks = sum(forks_count),
+                        forksA=mean(forks_count),
+                        forksSD=sd(forks_count),
+                        size=sum(as.numeric(size)),
+                        watchers=sum(watchers_count),
                         stars=sum(stargazers_count)
                 )
+df.language$language = factor(df.language$language)
 
+```
+
+To first get an idea of the relationships between languages and their features, lets get a correlation grid:
+```{r}
+ggpairs(df.language)
+```
+
+Collaboration, as we've discussed can occur on two levels code contribution and bug reporting. Is there a clear linear relationship between the two? 
+```{r}
 coef(lm(log10(forks+1) ~ log10(open_issues+1), data = df.language))
 
 ggplot(df.language, aes(forks, open_issues)) + geom_point(aes(size=n,colour=size)) + scale_x_log10() + scale_y_log10() + geom_abline(intercept=0.1375, slope=.918)
 
 ```
+
+#### Age and language
+
+Is there a relationship between the age of a repository, or  better stated, the early adoption rate for github and specific programming languages?
+
+```{r}
+ggplot(subset(df, df$language == "Python"| df$language == "Ruby" | df$language == "JavaScript" | df$language == "C++"), aes(language, log10(-age))) + geom_boxplot()
+```
+
 #### Top 10 languages
+Given that ther are 143 progamming languages, it can get cluttered up. I'ts more interesting to see which are the top 10 languages, and how do they compare with one another. For these graphs we use a different dataframe witch only takes in the top 10 languages and removes the NA value in the 4 column. 
 ```{r}
 df.top_languages = df.language[order(-df.language$n),]
 df.top_languages = df.top_languages[-c(4),]
-df.top_languages = df.top_languages[seq(1,10),]s
+df.top_languages = df.top_languages[seq(1,10),]
 
-head(languages)
+head(df.top_languages)
 ```
 
 
 ##### Forks of top languages
+So, which languages have the highest fork counts? It is not a close competition for first place, *JavaScript* is the clear winner. It's interesting to see that there is a mix of scripting languages and lower level languages as well, like C++. 
 ```{r}
 ggplot(df.top_languages, aes(language, forks)) + geom_bar(stat="identity")
 ```
 
 
-#### Forks vs Open Issues, and the amount of 
+##### Forks vs Open Issues, and the amount of
 ```{r}
 ggplot(df.top_languages, aes(open_issues, forks, size=n, colour=language)) + geom_point() + guides(size=FALSE)
 ```
 The color for the smallest dots are hard to see, but
 
 
+### Age vs Forks
+
+```{r}
+ggplot(df, aes(-age, forks_count)) + geom_point()
+
+ggplot(subset(df, forks_count > 10), aes(log10(-age), log10(forks_count), size=stargazers_count)) + geom_point()
+```
+
+
 ## Final Plots and Summary
 
 
-## Reflection
+### Audacious plots 
+For those that might be interested, Google hosts the whole Github Archive in Big Query. This gives the potential to analyze the whole dataset and not limit to one event in one day, like this research did. I ran the following query to get all the repositories that mention Udacity either in the name or description of the repository, to see the amount of activity that Udacity generates on Github. 
 
+```{SQL}
+SELECT repository_language,
+       repository_name,
+       repository_description,
+       LEFT (FORMAT_UTC_USEC( UTC_USEC_TO_DAY(PARSE_UTC_USEC(created_at))), 7) as month, 
+       COUNT(*) as pushes,
+       SUM(payload_size) as commits,
+       SUM(repository_forks) as forks,
+       SUM(repository_watchers) as watchers,
+       SUM(repository_open_issues) as open_issues,
+       SUM(repository_size) as size
+FROM (
+  TABLE_QUERY([githubarchive:month],
+    'REGEXP_MATCH(table_id, r"^201[1-4]\d\d")'
+  ))
+WHERE type = 'PushEvent'
+AND (REGEXP_MATCH(repository_name,r'[^aA](u|U)dacity')) 
+OR (REGEXP_MATCH(repository_description,r'[^aA](u|U)dacity')) 
+GROUP BY month, repository_language, repository_name, repository_description
+LIMIT 10000
+```
+With the csv file output, we can now find out how many repositories that mention Udacity have created push events from 2011 to 2014? 
+
+```{r}
+library(zoo)
+
+bigquery = read.csv("data/results-20150123-183042.csv")
+bigquery$date = sapply(bigquery$month, as.yearmon)
+
+ggplot(bigquery, aes(date, pushes)) + geom_line()
+```
+
+## Reflection
+The Github timeline dataset is rich with a lot of data that this research didn't have time to complete. We just analyzed 1 of 16 types of events, focused on 1 day of the year. 
 
 
 ### Using Google BigQuery to analyze years of data
-[Github timeline and Google BigQuery](http://googledevelopers.blogspot.com/2012/05/using-google-bigquery-to-learn-from.html). 
-
-
+[Github timeline and Google BigQuery](http://googledevelopers.blogspot.com/2012/05/using-google-bigquery-to-learn-from.html).
