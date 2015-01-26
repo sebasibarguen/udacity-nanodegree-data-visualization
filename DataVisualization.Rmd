@@ -2,9 +2,11 @@
 title: "Github's Timeline"
 output: html_document
 ---
+by: "Sebastian Ibarguen"
+@sebasibarguen
 
 ## Abstract
-This short analysis looks at how public collaboration happens in Github. The study focuses on *PushEvents* which are the atomic blocks of contribution. The primary interest is to better understand the relationhip's collaboration by the repository features. 
+This short analysis looks at how public collaboration happens in Github. The study focuses on *PushEvents* which are the atomic blocks of contribution. The primary interest is to better understand the relationhip's collaboration by the repository features.
 
 ## Introduction
 
@@ -12,7 +14,7 @@ This short analysis looks at how public collaboration happens in Github. The stu
 
 It is now the biggest code host and is huge in the open-source community. The new workflows and collaborations models have changed the ease, simplicity and automation of creating software.
 
-In this study we are interested in the public projects hosting, specifically *PushEvent*. Github's API gives us all the public events happening in their [timeline](https://developer.github.com/v3/activity/events/). This study uses the Github Archive dataset, whic is a compilation of the Github timeline. The data format is a JSON stream, which is given in a Gzip file and is aggregated in an hourly basis.
+In this study we are interested in the public projects hosting, specifically *PushEvent*. Github's API gives us all the public events happening in their [timeline](https://developer.github.com/v3/activity/events/). This study uses the Github Archive dataset, which is a compilation of the Github timeline. The data format is a JSON stream, which is given in a Gzip file and is aggregated in an hourly basis.
 
 Given the size of the dataset, I took just one day, November 1, 2014. (In the [extra section](## extra section) I explored using BigQUery to analyze years of data which would of been imposible to do it locally because of the size of the dataset). Arguably *PushEvent* represents the most important event when analyzing collaboration. A *PushEvent* in simple terms is a (small) code contribution to a project, and it is comprised of *git commits*.
 
@@ -53,13 +55,13 @@ with open('data/2014-11-01-PushEvent.json', 'wb') as f:
         print "Finished writing: " + filename
 ```
 
-After running the python script, the data file is still a json stream, but the big difference is that it's of the same type of event and therefore the same json scheme. In R we then read the data and pass it to a dataframe. The newly created dataframe is still in a weird format because it has dataframes inside of dataframes, in a way copying what the initial json scheme. To better clean the data, a new dataframe is created with the variables of interest and in the same level. We then delete the old dataframe to free up memory.
+After running the python script, the data file is still a json stream, but the big difference is that it's of the same type of event and therefore the same json scheme. The json file can be [downloaded from this link](http://storage.googleapis.com/udacity-nanodegree-visualization/2014-11-01-PushEvent-2.json). In R we then read the data and pass it to a dataframe. The newly created dataframe is still in a weird format because it has dataframes inside of dataframes, in a way copying what the initial json scheme. To better clean the data, a new dataframe is created with the variables of interest and in the same level. We then delete the old dataframe to free up memory.
 
 ```{r}
-library(jsonlite)
-library(ggplot2)
-library(dplyr)
-library(maps)
+suppressMessages(library(jsonlite))
+suppressMessages(library(ggplot2))
+suppressMessages(library(dplyr))
+suppressMessages(library(maps))
 suppressMessages(library(GGally))
 ```
 
@@ -91,25 +93,26 @@ With the data ready, we can start doing the cool stuff =)
 
 To start of, we look at all the variables histograms to get an idea of their distribution. Below we can see the size of the repositories in KB.
 
-### Size and complexity of repositories
+### How much work per push?
+How much is the work load per push event? In other words, do coders wait a long time to push, or do the push when they have a small amount of commits?
 ```{r}
 ggplot(df, aes(payloadSize)) + geom_histogram() + scale_x_log10() + ggtitle("Histogram of Number of commits per push (log10)") + xlab("Frequency") + ylab("Number of commits per push")
 ```
+Even when scaled be log, the frequency of commits is small per push event.
 
-The size of a repository indirectly measures the complexity of a project. The reasoning goes as follows: bigger size means more bytes which (almost always) translates into more lines of code and/or more files which consequently increases the amount of information needed to process and understand the project, therefore it increases its complexity.
 
 ### Collaboration in general
 
-In Github, there are two types of collaborations possible, bug reporting (discussions) or code contribution. Both play major roles in open source software. In the dataset, bug reporting is measured via open issues and code contributions is measured via fork count. 
+In Github, there are two types of collaborations possible, bug reporting (discussions) or code contribution. Both play major roles in open source software. In the dataset, bug reporting is measured via open issues and code contributions is measured via fork count.
 
 So let's take a loot at the bug reporting histogram.
 
 ```{r}
-ggplot(df, aes(open_issues)) + geom_histogram() + scale_x_log10() + ggtitle("Histogram of Open Issues of public Github repositories (log10)") + xlab("Number of open issues") + ylab("Frequency") 
+ggplot(df, aes(open_issues)) + geom_histogram() + scale_x_log10() + ggtitle("Histogram of Open Issues of public Github repositories (log10)") + xlab("Number of open issues") + ylab("Frequency")
 
 ```
 
-The x variable was transformed using logarithm scale, *it seems that there are few projects with a lot of open issues, and a lot with few or none*. 
+The x variable was transformed using logarithm scale, *it seems that there are few projects with a lot of open issues, and a lot with few or none*.
 
 Now lets look at code contributions.
 ```{r}
@@ -121,12 +124,14 @@ Fork counts seem to follow the same pattern as open issues. Makes a lot of sense
 
 ### Complexity and collaboration
 
-If we take size to measure complexity, do more complex projects have more collaboration (measured via forks)? We can theorize that more complex projects are more easily undertaken by bigger teams with more collaborators. On the other side, smaller projects are easier to understand and therefore have a lower barrier to entry for new collaborators. 
+The size of a repository indirectly measures the complexity of a project. The reasoning goes as follows: bigger size means more bytes which (almost always) translates into more lines of code and/or more files which consequently increases the amount of information needed to process and understand the project, therefore it increases its complexity.
+
+Do more complex projects have more collaboration (measured via forks)? We can theorize that more complex projects are more easily undertaken by bigger teams with more collaborators. On the other side, smaller projects are easier to understand and therefore have a lower barrier to entry for new collaborators.
 
 ```{r}
 ggplot(df, aes(forks_count, size)) + geom_point() + xlab("Fork count") + ylab("Size")  + ggtitle("Fork count vs size") + scale_x_log10() + scale_y_log10()
 ```
-The opposing forces seem to even out somewhate. There is a weak relationship between size and fork counts. 
+The opposing forces seem to even out somewhat. There is a weak relationship between size and fork counts.
 
 What if we take the ratio between size and fork count? Should there be any pattern in complexity per contributor?
 
@@ -134,7 +139,7 @@ What if we take the ratio between size and fork count? Should there be any patte
 ggplot(df, aes(size/forks_count)) + geom_histogram() + scale_x_log10() + xlab("Size/Fork count") + ylab("Count")  + ggtitle("Kilobytes per contributor")
 ```
 
-This is a really surprising graph, and the ratio of size over fork count seems to be normally distributed. This might be interpreted as kilobytes per contributer to the project (if we take forks as a proxy for number of contributors). *It appears that most contributers give around 100 kilobytes of code, which is about 100 characters or 1-2 lines of code*. 
+This is a really surprising graph, and the ratio of size over fork count seems to be normally distributed. This might be interpreted as kilobytes per contribute to the project (if we take forks as a proxy for number of contributors). *It appears that most contributors give around 100 kilobytes of code, which is about 100 characters or 1-2 lines of code*.
 
 
 ### Coding through the day
@@ -150,7 +155,7 @@ df$pushHour = sapply(df$hourOfDay, function(x) { return( x[[1]] ) })
 ggplot(df, aes(pushHour)) + geom_histogram(binwidth=1) + xlab("Hour of day") + ylab("Count")  + ggtitle("Push counts by hour of day")
 ```
 
-Coders tend to push more around 12pm and follow a normal distribution curve around that mean. Although there appears to be a steady and more stable rise from 7am till 12pm-13pm, and then the push counts tend to level down more steaply (although not by that much). 
+Coders tend to push more around 12pm and follow a normal distribution curve around that mean. Although there appears to be a steady and more stable rise from 7am till 12pm-13pm, and then the push counts tend to level down more steeply (although not by that much).
 
 Now that we are on looking for patterns with time, it might be interesting to see how old are the repositories and if there is a relationship between repository age and forks.
 
@@ -168,7 +173,7 @@ Wow, there are a lot of very young repositories and exponentially fewer older on
 # Plot the age histogram scaling the x by log
 ggplot(df, aes(-age )) + geom_histogram()  + scale_x_log10() + xlab("Repository age (days)") + ylab("Count")  + ggtitle("Repository age histogram (log(days))")
 ```
-This plot is quite interesting, there is a clear peak in new repositories, then there is a drop and it steadily rises again. This might indicate there are different types of repositories that coders use. For ejample there are short term repositories where I might just upload my Udacity project and not commit new code to it in a long time, then there are longer term projects like Twitter Bootstrap.
+This plot is quite interesting, there is a clear peak in new repositories, then there is a drop and it steadily rises again. This might indicate there are different types of repositories that coders use. For example there are short term repositories where I might just upload my Udacity project and not commit new code to it in a long time, then there are longer term projects like Twitter Bootstrap.
 
 
 ```{r}
@@ -180,7 +185,7 @@ ggplot(subset(df, forks_count > 10), aes(-age, forks_count, size=stargazers_coun
 
 What countries are most active?
 
-To do a good geographic analysis, first I had to get the latitude and longitude of all the locations. For that I used the [Unlock API](http://edina.ac.uk/unlock/places/api.html) following the suggestion of [this website](http://geography.oii.ox.ac.uk/?page=github). I also took inspiration from a fellow [Udacitian's example project](https://s3.amazonaws.com/udacity-hosted-downloads/ud651/GeographyOfAmericanMusic.html). Given the time that it takes to run on all 6068 locations, I wrote the df.location dataframe with the lat-long values into a csv file so it would take less time to read. 
+To do a good geographic analysis, first I had to get the latitude and longitude of all the locations. For that I used the [Unlock API](http://edina.ac.uk/unlock/places/api.html) following the suggestion of [this website](http://geography.oii.ox.ac.uk/?page=github). I also took inspiration from a fellow [Udacitian's example project](https://s3.amazonaws.com/udacity-hosted-downloads/ud651/GeographyOfAmericanMusic.html). Given the time that it takes to run on all 6068 locations, I wrote the df.location dataframe with the lat-long values into a csv file so it would take less time to read.
 
 ```
 df.location = group_by(df, location) %>%
@@ -193,27 +198,27 @@ df.location$centroid = NA
 df.location$country = NA
 
 for(i in 1:length(df.location$location)) {
-  
+
   if( nchar(df.location$location[i]) <= 3 ){
     df.location$centroid[i] = NA
     next
   }
-  
+
   url = paste("http://unlock.edina.ac.uk/ws/search?format=json&name=", URLencode(df.location$location[i]), sep="")
   good_url_call = 1
-  tryCatch({ 
+  tryCatch({
     json = fromJSON(url)
     }, error = function(e){
       good_url_call = 0
     })
-  
+
   if (!good_url_call) { next }
-  
+
   if ( as.numeric(json$totalResults) > 0 ) {
 
     df.location$centroid[i] = json$features$properties$centroid[1]
     df.location$country[i] = json$features$properties$country[1]
-  
+
   }
 }
 
@@ -224,26 +229,26 @@ df.location$lon = sapply(latlon, function(x){ return(as.numeric(x[1])) })
 write.csv(df.location, "data/github_location.csv")
 ```
 
-So reading the file, and the first thing to do is just plot the latitute and longitued.
+So reading the file, and the first thing to do is just plot the latitude and longitude.
 ```{r}
 df.location = read.csv("data/github_location.csv")
 
-ggplot(df.location, aes(lat, lon)) + geom_point() + xlab("Longitude") + ylab("Lattitue")  + ggtitle("World long-lat mapping")
+ggplot(df.location, aes(lon, lat)) + geom_point() + xlab("Longitude") + ylab("Lattitue")  + ggtitle("World long-lat mapping")
 
 ```
 
-The plot is pretty cool, even though we don't have a map behind it, we can clearly see the continents and North America, South America and Europe with huge activity. Of the 6068 possible locations, there were 2022 missing or unable to identify. Given that the missing data is about a third of the dataset, the data probably is not a good statistical representation of the Github community because of self-selection. It wouldn't be unreasonable to suspect that more people from countrys of the likes of China tend not to list their countrys when compared to the US for example. 
+The plot is pretty cool, even though we don't have a map behind it, we can clearly see the continents and North America, South America and Europe with huge activity. Of the 6068 possible locations, there were 2022 missing or unable to identify. Given that the missing data is about a third of the dataset, the data probably is not a good statistical representation of the Github community because of self-selection. It wouldn't be unreasonable to suspect that more people from countrys of the likes of China tend not to list their countrys when compared to the US for example.
 
 ```{r}
 map = map_data("world")
 
 ggplot(map, aes(x=long, y=lat, group=group)) +
-  geom_polygon() + 
+  geom_polygon() +
   coord_map() +
-  geom_jitter(data=df.location, aes(lat, lon, colour="blue", group=NULL))
+  geom_jitter(data=df.location, aes(lon, lat, colour="blue", group=NULL))
 ```
 
-When we group the data by country, we see that most push events come from the US and then european countries plus Canada. 
+When we group the data by country, we see that most push events come from the US and then european countries plus Canada.
 ```{r}
 df.country = group_by( df.location, country) %>% summarise(n=n(), pushes = sum(total), lat = mean(lat), lon=mean(lon))
 
@@ -257,21 +262,22 @@ head(df.country)
 
 ### Programming languages
 
-Do coders of certain languages tend to be more collaborative? 
+Do coders of certain languages tend to be more collaborative?
 
-To facilitate the analyses, a new dataframe is created by grouping the original dataframe by languages. 
+To facilitate the analyses, a new dataframe is created by grouping the original dataframe by languages.
 ```{r}
 df.language = group_by(df, language) %>%
               summarise(n = n(),
                         open_issues = sum(open_issues),
-                        open_issuesA=mean(open_issues),
+                        open_issuesA = mean(open_issues),
                         open_issuesSD = sd(open_issues),
                         forks = sum(forks_count),
-                        forksA=mean(forks_count),
-                        forksSD=sd(forks_count),
-                        size=sum(as.numeric(size)),
-                        watchers=sum(watchers_count),
-                        stars=sum(stargazers_count)
+                        forksA = mean(forks_count),
+                        forksSD = sd(forks_count),
+                        size = sum(as.numeric(size)),
+                        watchers = sum(watchers_count),
+                        stars = sum(stargazers_count),
+                        age = mean(age)
                 )
 df.language$language = factor(df.language$language)
 
@@ -279,13 +285,13 @@ df.language$language = factor(df.language$language)
 
 To first get an idea of the relationships between languages and their features, lets get a correlation grid:
 ```{r}
-ggpairs(subset(df.language, select=c(n, open_issues, forks, size)))
+ggpairs(subset(df.language, select=c(n, open_issues, forks, size, age)))
 ```
 
-The correlation between open issues and forks is crearly marked at 0.737, as well a the correlation between the number of push events and for a certain language and the number of open issues and forks. This last relationship is interesting, and makes sense. Coders who tends to be more active using Github will probably tend to be more active in other activities like forks and opening issues. Another interesting note is that *bigger does not mean more collaboration*. The reasons behind this might be that a bigger project is more dauting to understand and therefore more costly for people to collaborate to. 
+The correlation between open issues and forks is clearly marked at 0.737, as well a the correlation between the number of push events and for a certain language and the number of open issues and forks. This last relationship is interesting, and makes sense. Coders who tends to be more active using Github will probably tend to be more active in other activities like forks and opening issues. Another interesting note is that *bigger does not mean more collaboration*. The reasons behind this might be that a bigger project is more daunting to understand and therefore more costly for people to collaborate to.
 
 This takes us to the next plots, to better see the correlation.
-Collaboration, as we've discussed can occur on two levels code contribution and bug reporting. Is there a clear linear relationship between the two? 
+Collaboration, as we've discussed can occur on two levels code contribution and bug reporting. Is there a clear linear relationship between the two?
 ```{r}
 # Save the coefficients of correlations
 model = coef(lm(log10(forks) ~ log10(open_issues), data = subset(df.language, forks > 0 & open_issues > 0)))
@@ -303,7 +309,7 @@ ggplot(subset(df, df$language == "Python"| df$language == "Ruby" | df$language =
 ```
 
 #### Top 10 languages
-Given that there are 143 progamming languages, the visualizations can get cluttered up. Itss more interesting to see which are the top 10 languages, and how do they compare with one another. For these graphs we use a different dataframe witch only takes in the top 10 languages and removes the NA value in the 4 column. 
+Given that there are 143 programming languages, the visualizations can get cluttered up. It's more interesting to see which are the top 10 languages, and how do they compare with one another. For these graphs we use a different dataframe witch only takes in the top 10 languages and removes the NA value in the 4 column.
 ```{r}
 df.top_languages = df.language[order(-df.language$n),]
 df.top_languages = df.top_languages[-c(4),]
@@ -313,38 +319,26 @@ head(df.top_languages)
 ```
 
 
-So, which languages have the highest fork counts? It is not a close competition for first place, *Ruby* is the clear winner, with JavaScript comming in close second. It's interesting to see that there is a mix of scripting languages and lower level languages as well, like C++. 
+So, which languages have the highest fork counts? It is not a close competition for first place, *Ruby* is the clear winner, with JavaScript coming in close second. It's interesting to see that there is a mix of scripting languages and lower level languages as well, like C++.
 ```{r}
 ggplot(df.top_languages, aes(language, forks)) + geom_bar(stat="identity") + ggtitle("Forks of top 10 languages")
 ```
 
-Taking the analysis another step, we can see if there is a relationship between the amount of open issues, forks and the number of push events. 
+Taking the analysis another step, we can see if there is a relationship between the amount of open issues, forks and the number of push events.
 ```{r}
 ggplot(df.top_languages, aes(open_issues, forks, size=n, colour=language)) + geom_point() + guides(size=FALSE) + ggtitle("Forks, Open Issues and push counts of top 10 languages")
 ```
-The color for the smallest dots are hard to see, but we know they are C and C#. There seems to be a positive relationship between the three factors. 
+The color for the smallest dots are hard to see, but we know they are C and C#. There seems to be a positive relationship between the three factors.
 
-
-## Final Plots and Summary
-
-
-## Reflection
-The Github timeline dataset is rich with a lot of data that this research didn't have time to analyze. We just analyzed 1 of 16 types of events, focused on 1 day of the year. With just a small sample size, there stills is a lot of information that was extracted. Forks and open issues where at the heart of most of the plots given that they are are the blocks that represent collaboration in Github. 
-
-In general, the research showed that most collaboration coders comes from US and Europe, that write in Ruby, JavaScript, Java and Python and push code around 12pm. A more complex project does not translate into more collaboration, but probably deeper collaboration. There is a strong feedback loop for successful projects that seem to attract more collaboration and therefore become successful. This is why fork counts and open issues follow an exponential relation instead of a linear. 
-
-A more in-depth analyses would take the whole Github timeline dataset. Using the whole dataset would open up a lot of cooler analyses. Given that this research only took in 1 day, there are risks of sampling error. 
-
-
-### Udacity plots 
-Just for fun, [Google hosts the whole Github Archive in Big Query](http://googledevelopers.blogspot.com/2012/05/using-google-bigquery-to-learn-from.html). This gives the potential to analyze the whole dataset and not limit to one event in one day, like this research did. I ran the following query to get all the repositories that mention Udacity either in the name or description of the repository, to see the amount of activity that Udacity generates on Github. 
+### Having fun with Google BigQuery. Udacity promoting Github usage?
+Just for fun, well take the BigQuery database for a spin. [Google hosts the whole Github Archive in Big Query](http://googledevelopers.blogspot.com/2012/05/using-google-bigquery-to-learn-from.html). This gives the potential to analyze the whole dataset and not limit to one event in one day, like this research did. I ran the following query to get all the repositories that mention Udacity either in the name or description of the repository, to see the amount of activity that Udacity generates on Github.
 
 
 ```{SQL}
 SELECT repository_language,
        repository_name,
        repository_description,
-       LEFT (FORMAT_UTC_USEC( UTC_USEC_TO_DAY(PARSE_UTC_USEC(created_at))), 7) as month, 
+       LEFT (FORMAT_UTC_USEC( UTC_USEC_TO_DAY(PARSE_UTC_USEC(created_at))), 7) as month,
        COUNT(*) as pushes,
        SUM(payload_size) as commits,
        SUM(repository_forks) as forks,
@@ -356,12 +350,12 @@ FROM (
     'REGEXP_MATCH(table_id, r"^201[1-4]\d\d")'
   ))
 WHERE type = 'PushEvent'
-AND (REGEXP_MATCH(repository_name,r'[^aA](u|U)dacity')) 
-OR (REGEXP_MATCH(repository_description,r'[^aA](u|U)dacity')) 
+AND (REGEXP_MATCH(repository_name,r'[^aA](u|U)dacity'))
+OR (REGEXP_MATCH(repository_description,r'[^aA](u|U)dacity'))
 GROUP BY month, repository_language, repository_name, repository_description
 LIMIT 10000
 ```
-With the csv file output, we can now find out how many repositories that mention Udacity have created push events from 2011 to 2014? 
+With the csv file output, we can now find out how many repositories that mention Udacity have created push events from 2011 to 2014?
 
 ```{r}
 library(zoo)
@@ -369,15 +363,48 @@ library(zoo)
 bigquery = read.csv("data/results-20150123-183042.csv")
 bigquery$date = sapply(bigquery$month, as.yearmon)
 
-bigquery.byMonth = group_by(bigquery, date) %>% summarise(n=n(), 
+bigquery.byMonth = group_by(bigquery, date) %>% summarise(n=n(),
                                                           forks = sum(forks),
                                                           pushes = sum(pushes))
 
 ggplot(bigquery.byMonth, aes(date, pushes)) + geom_line()
 ```
 
-Udacity is clearly promoting a lot of more code pushing to Github since mid 2014. 
+Udacity is clearly promoting a lot of more code pushing to Github since mid 2014.
 
 ```{r}
 ggplot(bigquery.byMonth, aes(date, forks)) + geom_line()
 ```
+
+
+
+## Final Plots and Summary
+In this research I detailed my train of thought and process of going through Githubs dataset. For the final plots I will repeat my favourite three, which I believe are most insightful.
+
+```{r}
+ggplot(map, aes(x=long, y=lat, group=group)) +
+  geom_polygon() +
+  coord_map() +
+  geom_jitter(data=df.location, aes(lon, lat, colour="blue", group=NULL))
+```
+
+This plot shows the geographic diversity, dispersion and concentration of code contribution that happend in Github every single day. It's really a global phenomena, but still dominated by developed countries.
+
+```{r}
+ggplot(df, aes(pushHour)) + geom_histogram(binwidth=1) + xlab("Hour of day") + ylab("Count")  + ggtitle("Push counts by hour of day")
+```
+
+This might not be so surprising, but it does hint that code contribution happens during office hours, it probably is work!
+
+```{r}
+ggplot(df.top_languages, aes(open_issues, forks, size=n, colour=language)) + geom_point() + guides(size=FALSE) + ggtitle("Forks, Open Issues and push counts of top 10 languages")
+```
+
+Finally, this last plot is dense and shows a lot of information about language popularity in Github. The bigger the dot, the more push events that language had. There are various scripting languages like Ruby and JavaScript which show the most collaboration, but also C based languages.
+
+## Reflection
+The Github timeline dataset is rich with a lot of data that this research didn't have time to analyze. We just analyzed 1 of 16 types of events, focused on 1 day of the year. With just a small sample size, there stills is a lot of information that was extracted. Forks and open issues where at the heart of most of the plots given that they are are the blocks that represent collaboration in Github.
+
+In general, the research showed that most collaboration coders comes from US and Europe, that write in Ruby, JavaScript, Java and Python and push code around 12pm. A more complex project does not translate into more collaboration, but probably deeper collaboration. There is a strong feedback loop for successful projects that seem to attract more collaboration and therefore become successful. This is why fork counts and open issues follow an exponential relation instead of a linear.
+
+A more in-depth analyses would take the whole Github timeline dataset. Using the whole dataset would open up a lot of cooler analyses. Given that this research only took in 1 day, there are risks of sampling error.
