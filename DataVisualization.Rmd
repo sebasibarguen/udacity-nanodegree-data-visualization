@@ -100,6 +100,19 @@ To start of, we look at all the variables histograms to get an idea of their dis
 
 ### Understanding the data
 
+Here I will give a brief description of all the variables that are of interest in this research. If you need to learn more about git, github and code
+collaboration concepts, I suggest the following reading: [Github Glossary](https://help.github.com/articles/github-glossary).
+
+Variable | Description | More info
+_________|_____________|___________
+Commit   | An individual change to a file or files saved with specific id | https://help.github.com/articles/github-glossary/#commit
+Push     | Sending local commits to remote repository  | [Push](https://help.github.com/articles/github-glossary/#push)
+Forks    | A copy of a repository to another user | [Github Fork](https://help.github.com/articles/fork-a-repo/).
+Open Issues | Issues presented by users, like bugs or improvements | [Issue's](https://help.github.com/articles/github-glossary/#issue)
+StarGazer's | Count of users that have starred a public repository to follow updates | [Github Stars](https://help.github.com/articles/about-stars/)
+
+
+
 ### How much work per push?
 How much is the work load per push event? In other words, do coders wait a long time to push, or do the push when they have a small amount of commits?
 ```{r}
@@ -309,7 +322,7 @@ map = map_data("world")
 ggplot(map, aes(x = long, y = lat, group = group)) +
   geom_polygon() +
   coord_map() +
-  geom_jitter(data= d f.location, aes(lon, lat, colour="blue", group=NULL)) +
+  geom_jitter(data = df.location, aes(lon, lat, colour="blue", group=NULL)) +
   xlab("Longitude") + 
   ylab("Lattitue")  + 
   ggtitle("World long-lat mapping")
@@ -319,7 +332,7 @@ When we group the data by country, we see that most push events come from the US
 ```{r}
 # Create new dataframe by grouping points by country.
 df.country = group_by( df.location, country) %>% 
-             summarise( pushes = sum(total), lat = mean(lat), lon=mean(lon))
+             summarise( pushes = sum(total), lat = mean(lat), lon = mean(lon))
 
 df.country = df.country[order(-df.country$pushes),]
 
@@ -335,7 +348,7 @@ To facilitate the analyses, a new dataframe is created by grouping the original 
 ```{r}
 # Build new dataframe by grouping data by programming language.
 df.language = group_by(df, language) %>%
-              summarise(n = pushes,
+              summarise(pushes = n(),
                         open_issues = sum(open_issues),
                         open_issuesA = mean(open_issues),
                         open_issuesSD = sd(open_issues),
@@ -399,7 +412,7 @@ Given that there are 143 programming languages, the visualizations can get clutt
 ```{r}
 # Here we select the top 10 languages and remove the NA's row. First line orders the dataframe
 # by push count, then we remove the NA row, finally we select the top 10 rows from the dataframe.
-df.top_languages = df.language[order(-df.language$n),]
+df.top_languages = df.language[order(-df.language$pushes),]
 df.top_languages = df.top_languages[-c(4),]
 df.top_languages = df.top_languages[seq(1,10),]
 
@@ -520,7 +533,6 @@ This might not be so surprising, but it does hint that code contribution happens
 ggplot(df.top_languages, 
        aes(open_issues, forks, size=pushes, colour=language)) + 
   geom_point() + 
-  guides(size=FALSE) + 
   xlab("Open Issues") +
   ylab("Fork count") +
   ggtitle("Open issues vs Fork counts (size is repository count by language)")
