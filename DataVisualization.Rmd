@@ -103,13 +103,14 @@ To start of, we look at all the variables histograms to get an idea of their dis
 Here I will give a brief description of all the variables that are of interest in this research. If you need to learn more about git, github and code
 collaboration concepts, I suggest the following reading: [Github Glossary](https://help.github.com/articles/github-glossary).
 
-Variable | Description | More info
-_________|_____________|___________
-Commit   | An individual change to a file or files saved with specific id | https://help.github.com/articles/github-glossary/#commit
-Push     | Sending local commits to remote repository  | [Push](https://help.github.com/articles/github-glossary/#push)
-Forks    | A copy of a repository to another user | [Github Fork](https://help.github.com/articles/fork-a-repo/).
-Open Issues | Issues presented by users, like bugs or improvements | [Issue's](https://help.github.com/articles/github-glossary/#issue)
-StarGazer's | Count of users that have starred a public repository to follow updates | [Github Stars](https://help.github.com/articles/about-stars/)
+Variable    | Description                                                            | More info
+------------|------------------------------------------------------------------------|-------------------------------------------------------------------|
+Commit      | An individual change to a file or files saved with specific id         | https://help.github.com/articles/github-glossary/#commit          |
+Push        | Sending local commits to remote repository                             | [Push](https://help.github.com/articles/github-glossary/#push)    |
+Forks       | A copy of a repository to another user                                 | [Github Fork](https://help.github.com/articles/fork-a-repo/)      |
+Open Issues | Issues presented by users, like bugs or improvements                   | [Issue's](https://help.github.com/articles/github-glossary/#issue)|
+StarGazer's | Count of users that have starred a public repository to follow updates | [Github Stars](https://help.github.com/articles/about-stars/)     |
+
 
 
 
